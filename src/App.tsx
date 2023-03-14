@@ -1,26 +1,29 @@
 import React, { useRef, useEffect, useState } from "react";
-import Bookmarks from "@arcgis/core/widgets/Bookmarks";
-import Expand from "@arcgis/core/widgets/Expand";
 import MapView from "@arcgis/core/views/MapView";
 import Map from "@arcgis/core/Map";
 import config from "@arcgis/core/config.js";
 import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
-import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer";
+import { DoubleChevronRight as ExpandIcon } from "@mott-macdonald/smi-react-ui-kit/icons";
 
 import "./App.css";
 import { Box, Stack } from "@mui/system";
-import Renderer from "@arcgis/core/renderers/Renderer";
-import { Button, Typography } from "@mui/material";
+import { Divider } from "@mui/material";
 import { myRenderer } from "./myRenderer";
+import AttributeLayerTree from "./AttributeLayerTree";
+import FieldTable from "./FieldTable";
+import RagScoreIndicator from "./RagScoreIndicator";
 
 function App() {
   const mapDiv = useRef(null);
-  const renderer = new Renderer();
   const layerRef = useRef<FeatureLayer | null>(null);
   const mapRef = useRef<Map | null>(null);
-  const [isCustomRender, setisCustomRender] = useState(false);
-  const [attributes, setAttributes] = useState<string[]>([]);
-  const [enabledAttributes, setEnabledAttributes] = useState<string[]>([]);
+  const [isCustomRender, setisCustomRender] = useState(true);
+  const [attributes, setAttributes] = useState<__esri.Field[]>([]);
+  const [enabledAttributes, setEnabledAttributes] = useState<__esri.Field[]>(
+    []
+  );
+  const [showFilterMenu, setShowFilterMenu] = useState(true);
+  const [sqlExpression, setSqlExpression] = useState<string | undefined>();
 
   useEffect(() => {
     if (mapDiv.current) {
@@ -48,6 +51,9 @@ function App() {
     }
   }, []);
   //disable console clear
+  const toggleFilterMenu = () => {
+    setShowFilterMenu(!showFilterMenu);
+  };
 
   window.console.clear = () => {};
 
@@ -56,55 +62,70 @@ function App() {
     //when we have the attributes, update the state
     layerRef.current.load().then(() => {
       if (!layerRef.current?.fields) return;
-      const attributes = layerRef
-        .current!.fields.filter((field) => field.name !== "OBJECTID")
-        .map((field) => field.name);
+      const attributes = layerRef.current!.fields.filter(
+        (field) =>
+          field.name !== "OBJECTID" && field.name.startsWith("indicator")
+      );
       setAttributes(attributes);
       setEnabledAttributes(attributes);
     });
   }, [layerRef]);
 
-  const toggleAttribute = (attribute: string) => {
-    const newEnabledAttributes = enabledAttributes.includes(attribute)
-      ? enabledAttributes.filter((attr) => attr !== attribute)
+  const toggleAttribute = (attribute: __esri.Field) => {
+    const newEnabledAttributes = enabledAttributes.find(
+      (attr) => attr.name === attribute.name
+    )
+      ? enabledAttributes.filter((attr) => attr.name !== attribute.name)
       : [...enabledAttributes, attribute];
     setEnabledAttributes(newEnabledAttributes);
-  };
-
-  const enableCustomRenderer = () => {
-    setisCustomRender(true);
   };
 
   useEffect(() => {
     if (!layerRef.current) return;
     if (!isCustomRender) return;
-    layerRef.current.renderer = myRenderer(enabledAttributes);
+    layerRef.current.renderer = myRenderer(
+      enabledAttributes.map((attr) => attr.name)
+    );
   }, [enabledAttributes, isCustomRender]);
 
+  useEffect(() => {
+    if (!layerRef.current) return;
+    if (!sqlExpression) return;
+    layerRef.current.definitionExpression = sqlExpression;
+  }, [sqlExpression]);
+
   return (
-    <Stack alignItems="center" justifyContent="center" sx={{ height: "100vh" }}>
-      <Box
-        sx={{ width: 1000, height: 1000 }}
-        className="mapDiv"
-        ref={mapDiv}
-      ></Box>
-      <Stack>
-        <Button variant="contained" onClick={enableCustomRenderer}>
-          Enable Custom Renderer
-        </Button>
-        <Typography variant="h2">Attributes</Typography>
-        {attributes.map((attribute) => (
-          <Button
-            color={
-              enabledAttributes.includes(attribute) ? "primary" : "secondary"
-            }
-            key={attribute}
-            onClick={() => toggleAttribute(attribute)}
-          >
-            {attribute}
-          </Button>
-        ))}
+    <Stack
+      direction="row"
+      height={"100vh"}
+      divider={<Divider flexItem orientation="vertical" />}
+    >
+      <Stack
+        justifyContent="space-between"
+        width={showFilterMenu ? 300 : 0}
+        divider={<Divider />}
+      >
+        <AttributeLayerTree
+          fields={attributes}
+          enabledFields={enabledAttributes}
+          toggleAttribute={toggleAttribute}
+        />
+        <Stack alignItems="flex-end" p={1.5}>
+          <ExpandIcon onClick={toggleFilterMenu} />
+        </Stack>
       </Stack>
+      <Box flex={1}>
+        <Box width="100%" height="55%" className="mapDiv" ref={mapDiv}></Box>
+        <Box width="100%" height="45%">
+          {layerRef.current && (
+            <FieldTable
+              enabledAttributes={enabledAttributes}
+              layer={layerRef.current}
+              setSqlExpression={setSqlExpression}
+            />
+          )}
+        </Box>
+      </Box>
     </Stack>
   );
 }
