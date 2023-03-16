@@ -1,46 +1,68 @@
 import { CIMSymbol } from "@arcgis/core/symbols";
 type CIMSymbolLayer = CIMSymbol["data"]["symbol"]["symbolLayers"][number];
 
-const cimCircleGeometry = {
+const upHalfEllipseGeometry = {
   rings: [
     [
-      [8.5, 0.2],
-      [7.06, 0.33],
-      [5.66, 0.7],
-      [4.35, 1.31],
-      [3.16, 2.14],
-      [2.14, 3.16],
-      [1.31, 4.35],
-      [0.7, 5.66],
-      [0.33, 7.06],
-      [0.2, 8.5],
-      [0.33, 9.94],
-      [0.7, 11.34],
-      [1.31, 12.65],
-      [2.14, 13.84],
-      [3.16, 14.86],
-      [4.35, 15.69],
-      [5.66, 16.3],
-      [7.06, 16.67],
-      [8.5, 16.8],
-      [9.94, 16.67],
-      [11.34, 16.3],
-      [12.65, 15.69],
-      [13.84, 14.86],
-      [14.86, 13.84],
-      [15.69, 12.65],
-      [16.3, 11.34],
-      [16.67, 9.94],
-      [16.8, 8.5],
-      [16.67, 7.06],
-      [16.3, 5.66],
-      [15.69, 4.35],
-      [14.86, 3.16],
-      [13.84, 2.14],
-      [12.65, 1.31],
-      [11.34, 0.7],
-      [9.94, 0.33],
-      [8.5, 0.2],
+      [12.5, 0],
+      [10.38, 0.66],
+      [8.32, 1.4],
+      [6.39, 2.62],
+      [4.64, 4.28],
+      [3.14, 6.32],
+      [1.92, 8.7],
+      [1.02, 11.32],
+      [0.48, 14.12],
+      [0, 17],
+      [25, 17],
+      [24.52, 14.12],
+      [23.98, 11.32],
+      [23.08, 8.7],
+      [21.86, 6.32],
+      [20.36, 4.28],
+      [18.61, 2.62],
+      [16.68, 1.4],
+      [14.62, 0.66],
+      [12.5, 0],
+    ],
+  ],
+};
+
+const downHalfEllipseGeometry = {
+  rings: [
+    [
+      [12.5, 17],
+      [14.62, 16.34],
+      [16.68, 15.6],
+      [18.61, 14.38],
+      [20.36, 12.72],
+      [21.86, 10.68],
+      [23.08, 8.3],
+      [23.98, 5.68],
+      [24.52, 2.88],
+      [25, 0],
+      [0, 0],
+      [0.48, 2.88],
+      [1.02, 5.68],
+      [1.92, 8.3],
+      [3.14, 10.68],
+      [4.64, 12.72],
+      [6.39, 14.38],
+      [8.32, 15.6],
+      [10.38, 16.34],
+      [12.5, 17],
+    ],
+  ],
+};
+
+const cimSquareGeometry = {
+  rings: [
+    [
+      [0.0, 0.0],
+      [25.0, 0.0],
+      [25.0, 17.0],
+      [0.0, 17.0],
+      [0.0, 0.0],
     ],
   ],
 };
@@ -49,10 +71,12 @@ interface CreateSymbolLayerParams {
   primitiveName: string;
   color: number[];
   anchorPoint: { x: number; y: number };
+  index: number;
+  totalSymbols: number;
 }
 
 export function createCircleSymbolLayer(params: CreateSymbolLayerParams) {
-  const { primitiveName, color, anchorPoint } = params;
+  const { primitiveName, color, anchorPoint, index, totalSymbols } = params;
 
   const symbol = {
     type: "CIMPolygonSymbol",
@@ -72,15 +96,20 @@ export function createCircleSymbolLayer(params: CreateSymbolLayerParams) {
     colorLocked: false,
     anchorPointUnits: "Relative",
     primitiveName,
-    frame: { xmin: 0.0, ymin: 0.0, xmax: 17.0, ymax: 17.0 },
+    frame: { xmin: 0.0, ymin: 0.0, xmax: 25.0, ymax: 17.0 },
     markerGraphics: [
       {
         type: "CIMMarkerGraphic",
-        geometry: cimCircleGeometry,
+        geometry:
+          index === 0
+            ? upHalfEllipseGeometry
+            : index === totalSymbols - 1
+            ? downHalfEllipseGeometry
+            : cimSquareGeometry,
         symbol,
       },
     ],
-    scaleSymbolsProportionally: true,
     respectFrame: true,
+    scaleSymbolsProportionally: true,
   } as CIMSymbolLayer;
 }

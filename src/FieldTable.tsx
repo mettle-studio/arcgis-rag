@@ -52,7 +52,7 @@ const gridFilterItemToSql = (
     const enabledAttributeNames = enabledAttributes.map(
       (attribute) => attribute.name
     );
-    return `(${enabledAttributeNames.join("+")})/${
+    return `CAST((${enabledAttributeNames.join("+")}) as FLOAT)/${
       enabledAttributeNames.length
     } ${filterItem.operator} ${filterItem.value}`;
   }
@@ -105,7 +105,6 @@ const FieldTable: FC<FieldTableProps> = ({
 
   //change outfields when enabled attributes change
   useEffect(() => {
-    console.log(layer.fields);
     setQueryParams((currentParams) => ({
       ...currentParams,
       outFields: [
@@ -146,11 +145,6 @@ const FieldTable: FC<FieldTableProps> = ({
   if (!layer) {
     return null;
   }
-
-  console.log(
-    "data",
-    data?.map((feature) => feature.attributes)
-  );
 
   let columns: (GridColDef & {
     renderCell?: (params: GridRenderCellParams) => JSX.Element;
